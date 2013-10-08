@@ -32,14 +32,14 @@ public class Engine {
 				directoryCrawler();
 			} else {
 				if (!copyMp3(file)) {
+					return false;
 				}
 			}
 		}
 
-		System.out.println(String.format(
-				"count:%1$d - error:%2$d", _count, _error));
-		
-		
+		System.out.println(String.format("count:%1$d - error:%2$d", _count,
+				_error));
+
 		return true;
 	}
 
@@ -48,6 +48,7 @@ public class Engine {
 		MP3File mp3File = null;
 		try {
 			mp3File = new MP3File(inputFile);
+
 			ID3v1 id3 = mp3File.getID3v1Tag();
 			if (id3 != null) {
 				System.out.println(String.format(
@@ -60,10 +61,11 @@ public class Engine {
 			_count += 1;
 
 		} catch (IOException | TagException e) {
-			e.printStackTrace();
+			System.err.println("MP3 read failed.  Reason: " + e.getMessage());
 			return false;
 		}
 
 		return true;
 	}
+
 }
