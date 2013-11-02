@@ -2,9 +2,12 @@ package net.chrysalide.ID3Organize;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.farng.mp3.MP3File;
-import org.farng.mp3.TagException;
+import org.farng.mp3.id3.AbstractID3v2;
 import org.farng.mp3.id3.ID3v1;
 
 public class Engine {
@@ -13,59 +16,125 @@ public class Engine {
 	private int _error;
 	private File _sourceDir;
 	private File _destinationDir;
-	private String _format;
+	private List<String> _strError;
+	
 
-	public Engine(File srcDir, File destDir, String format) {
+	public Engine(File srcDir, File destDir) {
 		_sourceDir = srcDir;
 		_destinationDir = destDir;
-		_format = format;
 		_count = 0;
 		_error = 0;
+		_strError = new ArrayList<String>();
 	}
 
 	public boolean directoryCrawler() {
-		if (!_sourceDir.isDirectory())
+
+		boolean ret = directoryCrawler(_sourceDir);
+		System.out.println("-- Rapport --");
+		for (String line : _strError) {
+			System.out.println("error: " + line);
+		}
+		System.out.println(String.format("\ntotal:%1$d - erreurs:%2$d", _count,
+				_error));
+		return ret;
+	}
+
+	private boolean directoryCrawler(File input) {
+		if (!input.isDirectory())
 			return false;
 
-		for (File file : _sourceDir.listFiles()) {
+		for (File file : input.listFiles()) {
 			if (file.isDirectory()) {
-				directoryCrawler();
+				directoryCrawler(file);
 			} else {
 				if (!copyMp3(file)) {
-					return false;
+					continue;
 				}
 			}
 		}
-
-		System.out.println(String.format("count:%1$d - error:%2$d", _count,
-				_error));
-
 		return true;
 	}
 
 	public boolean copyMp3(File inputFile) {
 
-		MP3File mp3File = null;
+		String album;
+		String artist;
+		String title;
+
+		_count += 1;
 		try {
-			mp3File = new MP3File(inputFile);
+			MP3File mp3File = new MP3File(inputFile);
+			
+			ID3v1 id3v1 = mp3File.getID3v1Tag();
+			AbstractID3v2 id3v2 = mp3File.getID3v2Tag();
 
-			ID3v1 id3 = mp3File.getID3v1Tag();
-			if (id3 != null) {
-				System.out.println(String.format(
-						"Path:%1$s - artist:%2$s - title:%3$s", inputFile,
-						id3.getArtist(), id3.getTitle()));
+			if (id3v2 != null) {
+				album = id3v2.getAlbumTitle();
+				artist = id3v2.getLeadArtist();
+				title = id3v2.getSongTitle();
+			} else if (id3v1 != null) {
+				album = id3v1.getAlbum();
+				artist = id3v1.getArtist();
+				title = id3v1.getTitle();
 			} else {
-				System.out.println(String.format("Error:%1$s", inputFile));
+				_strError.add(inputFile.getPath() + " - id3 not found");
 				_error += 1;
+				return false;
 			}
-			_count += 1;
 
-		} catch (IOException | TagException e) {
-			System.err.println("MP3 read failed.  Reason: " + e.getMessage());
+		} catch (Exception e) {
+			_strError.add(inputFile.getPath() + " - exception");
+			_error += 1;
 			return false;
 		}
 
+		if (album.isEmpty()){
+			album = "_empty";
+		} else {
+			album = validateStringForFilename(album);	
+		}
+		if (artist.isEmpty()){
+			artist = "_empty";
+		} else {
+			artist = validateStringForFilename(artist);
+		}
+		if (title.isEmpty()){
+			title = "_empty";
+		} else {
+			title = validateStringForFilename(title);			
+		}
+
+		String path = _destinationDir + File.separator + artist
+				+ File.separator + album + File.separator + inputFile.getName();
+		
+		File dest = new File(path);
+		writeInPath(inputFile, dest);
 		return true;
 	}
 
+	private String validateStringForFilename(String input){
+		input.replace("/", "_");
+		input.replace("\\", "_");
+		input.replace("?", "_");
+		input.replace("%", "_");
+		input.replace("*", "_");
+		input.replace(":", "_");
+		input.replace("|", "_");
+		input.replace("\"", "_");
+		input.replace("<", "_");
+		input.replace(">", "_");
+		
+		return input;
+	}
+	
+	private boolean writeInPath(File file, File dest) {
+		try {
+			
+			Files.createDirectories(dest.getParentFile().toPath());
+			Files.copy(file.toPath(), dest.toPath());
+		} catch (IOException e) {
+			return false;
+		}
+		return true;
+	}
 }

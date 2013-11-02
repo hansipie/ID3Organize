@@ -16,18 +16,17 @@ public class Start {
 //	static Logger logger = Logger.getLogger(Start.class);
 	static File _dst;
 	static File _src;
-	static String _format;
-	
+//	static String _format;
 
 	public static void main(String[] args) {
 //		logger.info("ID3 Organize");
 		commandeLine(args);
 		
-		System.err.println("Source: " + _src);
-		System.err.println("Destination: " + _dst);
-		System.err.println("Format: " + _format);
+		System.out.println("Source: " + _src);
+		System.out.println("Destination: " + _dst);
+//		System.out.println("Format: " + _format);
 		
-		Engine engine = new Engine(_src, _dst, _format);
+		Engine engine = new Engine(_src, _dst/*, _format*/);
 		engine.directoryCrawler();
 	}
 
@@ -53,7 +52,7 @@ public class Start {
 			CommandLine line = parser.parse(options, args);
 			_src = new File(line.getOptionValue("s"));
 			_dst = new File(line.getOptionValue("d"));
-			_format = line.getOptionValue("f");
+//			_format = line.getOptionValue("f");
 			
 		} catch (ParseException exp) {
 			System.err.println("Parsing failed.  Reason: " + exp.getMessage());
@@ -63,5 +62,4 @@ public class Start {
 
 		return false;
 	}
-
 }
