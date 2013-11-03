@@ -20,7 +20,6 @@ public class Engine {
 	private int _totalCount;
 	private int _prevPerCent;
 
-
 	public Engine(File srcDir, File destDir) {
 		_sourceDir = srcDir;
 		_destinationDir = destDir;
@@ -34,14 +33,15 @@ public class Engine {
 	public boolean directoryCrawler() {
 
 		_totalCount = directoryCount(_sourceDir, _totalCount);
-		System.out.println(String.format("Total Items count: %1$d", _totalCount));
+		System.out.println(String
+				.format("Total Items count: %1$d", _totalCount));
 		boolean ret = directoryCrawler(_sourceDir);
 		System.out.println("-- Rapport --");
 		for (String line : _strError) {
 			System.out.println("error: " + line);
 		}
-		System.out.println(String.format("\ntotal: %1$d - erreurs: %2$d", _count,
-				_error));
+		System.out.println(String.format("\ntotal: %1$d - erreurs: %2$d",
+				_count, _error));
 		return ret;
 	}
 
@@ -98,31 +98,43 @@ public class Engine {
 				artist = id3v1.getArtist();
 				title = id3v1.getTitle();
 			} else {
+				String path = _destinationDir + File.separator + "_error"
+						+ File.separator + "id3 not found" + File.separator
+						+ inputFile.getName();
+				File dest = new File(path);
+				writeInPath(inputFile, dest);
+
 				_strError.add(inputFile.getPath() + " - id3 not found");
-				_error += 1;
 				return false;
 			}
 
 		} catch (Exception e) {
-			_strError.add(inputFile.getPath() + " - exception");
+			String path = _destinationDir + File.separator + "_error"
+					+ File.separator
+					+ validateStringForFilename(e.getMessage())
+					+ File.separator + inputFile.getName();
+			File dest = new File(path);
+			writeInPath(inputFile, dest);
+
+			_strError.add(inputFile.getPath() + " - Reason: " + e.getMessage());
 			_error += 1;
 			return false;
 		}
 
-		if (album.isEmpty()){
+		if (album.isEmpty()) {
 			album = "_empty";
 		} else {
-			album = validateStringForFilename(album);	
+			album = validateStringForFilename(album);
 		}
-		if (artist.isEmpty()){
+		if (artist.isEmpty()) {
 			artist = "_empty";
 		} else {
 			artist = validateStringForFilename(artist);
 		}
-		if (title.isEmpty()){
+		if (title.isEmpty()) {
 			title = "_empty";
 		} else {
-			title = validateStringForFilename(title);			
+			title = validateStringForFilename(title);
 		}
 
 		String path = _destinationDir + File.separator + artist
@@ -133,8 +145,12 @@ public class Engine {
 		return true;
 	}
 
-	private String validateStringForFilename(String input){
+	private String validateStringForFilename(String input) {
+		if (input != null) {
 		input = input.replaceAll("[^\\w\\s\\[\\]\\(\\),\\.]", "_");
+		} else{
+			input = "null";
+		}
 		return input;
 	}
 
@@ -147,11 +163,11 @@ public class Engine {
 		}
 		return true;
 	}
-	
-	private void progressCounter(){
+
+	private void progressCounter() {
 		int perCent = (_count * 100) / _totalCount;
-		if (perCent != _prevPerCent){
-			System.out.println(String.format("Progress: %1$d", perCent)+"%");
+		if (perCent != _prevPerCent) {
+			System.out.println(String.format("Progress: %1$d", perCent) + "%");
 		}
 		_prevPerCent = perCent;
 	}
