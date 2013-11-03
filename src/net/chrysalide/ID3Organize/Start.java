@@ -39,13 +39,13 @@ public class Start {
 		Option destination = new Option("d", "dst", true, "MP3 destination directory");
 		destination.setRequired(true);
 
-		Option format = new Option("f", "format", true, "MP3 destination directory");
-		format.setRequired(true);
+//		Option format = new Option("f", "format", true, "MP3 destination directory");
+//		format.setRequired(true);
 
 		Options options = new Options();
 		options.addOption(source);
 		options.addOption(destination);
-		options.addOption(format);
+//		options.addOption(format);
 
 		CommandLineParser parser = new BasicParser();
 		try {

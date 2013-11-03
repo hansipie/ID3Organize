@@ -113,23 +113,12 @@ public class Engine {
 	}
 
 	private String validateStringForFilename(String input){
-		input.replace("/", "_");
-		input.replace("\\", "_");
-		input.replace("?", "_");
-		input.replace("%", "_");
-		input.replace("*", "_");
-		input.replace(":", "_");
-		input.replace("|", "_");
-		input.replace("\"", "_");
-		input.replace("<", "_");
-		input.replace(">", "_");
-		
+		input = input.replaceAll("[^\\w\\s]", "_");
 		return input;
 	}
 	
 	private boolean writeInPath(File file, File dest) {
 		try {
-			
 			Files.createDirectories(dest.getParentFile().toPath());
 			Files.copy(file.toPath(), dest.toPath());
 		} catch (IOException e) {
