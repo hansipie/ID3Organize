@@ -3,14 +3,19 @@ package net.chrysalide.ID3Organize;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.farng.mp3.MP3File;
-import org.farng.mp3.id3.AbstractID3v2;
-import org.farng.mp3.id3.ID3v1;
+import com.mpatric.mp3agic.ID3v1;
+import com.mpatric.mp3agic.ID3v2;
+import com.mpatric.mp3agic.Mp3File;
 
 public class Engine {
+
+	final String regex = "[:\\\\/*?|<>]";
 
 	private int _count;
 	private int _error;
@@ -53,7 +58,7 @@ public class Engine {
 			if (file.isDirectory()) {
 				directoryCrawler(file);
 			} else {
-				if (!copyMp3(file)) {
+				if (!moveMp3(file)) {
 					continue;
 				}
 			}
@@ -75,7 +80,7 @@ public class Engine {
 		return count;
 	}
 
-	public boolean copyMp3(File inputFile) {
+	public boolean moveMp3(File inputFile) {
 
 		String album;
 		String artist;
@@ -84,25 +89,30 @@ public class Engine {
 		_count++;
 		progressCounter();
 		try {
-			MP3File mp3File = new MP3File(inputFile);
+			Mp3File mp3File = new Mp3File(inputFile.getPath());
 
-			ID3v1 id3v1 = mp3File.getID3v1Tag();
-			AbstractID3v2 id3v2 = mp3File.getID3v2Tag();
-
-			if (id3v2 != null) {
-				album = id3v2.getAlbumTitle();
-				artist = id3v2.getLeadArtist();
-				title = id3v2.getSongTitle();
-			} else if (id3v1 != null) {
+			if (mp3File.hasId3v1Tag()) {
+				ID3v1 id3v1 =  mp3File.getId3v1Tag();
 				album = id3v1.getAlbum();
 				artist = id3v1.getArtist();
 				title = id3v1.getTitle();
+			} else if (mp3File.hasId3v2Tag()) {
+				ID3v2 id3v2 =  mp3File.getId3v2Tag();
+				album = id3v2.getAlbum();
+				artist = id3v2.getArtist();
+				if ((artist == null) || artist.isEmpty()){
+					artist = id3v2.getOriginalArtist();
+				}
+				if ((artist == null) || artist.isEmpty()){
+					artist = id3v2.getAlbumArtist();
+				}
+				title = id3v2.getTitle();
 			} else {
 				String path = _destinationDir + File.separator + "_error"
 						+ File.separator + "id3 not found" + File.separator
 						+ inputFile.getName();
 				File dest = new File(path);
-				writeInPath(inputFile, dest);
+				moveFile(inputFile, dest);
 
 				_strError.add(inputFile.getPath() + " - id3 not found");
 				return false;
@@ -110,60 +120,84 @@ public class Engine {
 
 		} catch (Exception e) {
 			String path = _destinationDir + File.separator + "_error"
-					+ File.separator
-					+ validateStringForFilename(e.getMessage())
-					+ File.separator + inputFile.getName();
+					+ File.separator + validateString(e.getMessage()) + File.separator
+					+ inputFile.getName();
 			File dest = new File(path);
-			writeInPath(inputFile, dest);
+			moveFile(inputFile, dest);
 
 			_strError.add(inputFile.getPath() + " - Reason: " + e.getMessage());
 			_error += 1;
 			return false;
 		}
 
-		if (album.isEmpty()) {
+		if ((album == null) || album.isEmpty()) {
 			album = "_empty";
 		} else {
-			album = validateStringForFilename(album);
+			album = validateString(album);
 		}
-		if (artist.isEmpty()) {
+		if ((artist == null) || artist.isEmpty()) {
 			artist = "_empty";
 		} else {
-			artist = validateStringForFilename(artist);
+			artist = validateString(artist);
 		}
-		if (title.isEmpty()) {
+		if ((title == null) || title.isEmpty()) {
 			title = "_empty";
 		} else {
-			title = validateStringForFilename(title);
+			title = validateString(title);
 		}
 
 		String path = _destinationDir + File.separator + artist
 				+ File.separator + album + File.separator + inputFile.getName();
 
+		path = path.replace("...", "");
+		path = path.replace("\"", "");
 		File dest = new File(path);
-		writeInPath(inputFile, dest);
+		moveFile(inputFile, dest);
 		return true;
 	}
 
-	private String validateStringForFilename(String input) {
-		if (input != null) {
-		input = input.replaceAll("[^\\w\\s\\[\\]\\(\\),\\.]", "_");
-		} else{
-			input = "null";
-		}
+	private String validateString(String input){
+		//System.out.println("<-- " + input);
+		input = input.replaceAll(regex, "_");
+		//System.out.println("--> " + input);
 		return input;
 	}
 
-	private boolean writeInPath(File file, File dest) {
+	private boolean moveFile(File file, File dest) {
 		try {
-			Files.createDirectories(dest.getParentFile().toPath());
-			Files.copy(file.toPath(), dest.toPath());
+			System.out.println("Move " + file.toString() + " to " + dest.toString());
+			createDirectory(dest.getParentFile());
+			Files.move(file.toPath(), dest.toPath(),
+					StandardCopyOption.REPLACE_EXISTING);
+		} catch (NoSuchFileException e2) {
+			e2.printStackTrace();
+			return false;						
+		} catch (InvalidPathException e1){
+			e1.printStackTrace();
+			return false;				
 		} catch (IOException e) {
+			e.printStackTrace();
 			return false;
 		}
 		return true;
 	}
 
+	private void createDirectory(File path){
+		if (path.exists())
+			return;
+		if (path.getParentFile().exists()){
+			try {
+				System.out.println("Create Directory " + path.toString());
+				Files.createDirectories(path.toPath());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} else {
+			createDirectory(path.getParentFile());
+		}
+	}
+	
 	private void progressCounter() {
 		int perCent = (_count * 100) / _totalCount;
 		if (perCent != _prevPerCent) {
