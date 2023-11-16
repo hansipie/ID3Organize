@@ -20,7 +20,8 @@ public class Start {
 
 	public static void main(String[] args) {
 //		logger.info("ID3 Organize");
-		commandeLine(args);
+		if (commandeLine(args) == false)
+			return;
 		
 		System.out.println("Source: " + _src);
 		System.out.println("Destination: " + _dst);
@@ -53,13 +54,12 @@ public class Start {
 			_src = new File(line.getOptionValue("s"));
 			_dst = new File(line.getOptionValue("d"));
 //			_format = line.getOptionValue("f");
-			
+			return true;
 		} catch (ParseException exp) {
 			System.err.println("Parsing failed.  Reason: " + exp.getMessage());
 			HelpFormatter formatter = new HelpFormatter();
 			formatter.printHelp( "ID3Organize", options, true);
+			return false;
 		}
-
-		return false;
 	}
 }

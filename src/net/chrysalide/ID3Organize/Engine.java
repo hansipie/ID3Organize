@@ -9,9 +9,9 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.mpatric.mp3agic.ID3v1;
-import com.mpatric.mp3agic.ID3v2;
-import com.mpatric.mp3agic.Mp3File;
+import org.farng.mp3.MP3File;
+import org.farng.mp3.id3.AbstractID3v2;
+import org.farng.mp3.id3.ID3v1;
 
 public class Engine {
 
@@ -89,24 +89,18 @@ public class Engine {
 		_count++;
 		progressCounter();
 		try {
-			Mp3File mp3File = new Mp3File(inputFile.getPath());
+			MP3File mp3File = new MP3File(inputFile.getPath());
 
-			if (mp3File.hasId3v1Tag()) {
-				ID3v1 id3v1 =  mp3File.getId3v1Tag();
+			if (mp3File.hasID3v1Tag()) {
+				ID3v1 id3v1 =  mp3File.getID3v1Tag();
 				album = id3v1.getAlbum();
 				artist = id3v1.getArtist();
 				title = id3v1.getTitle();
-			} else if (mp3File.hasId3v2Tag()) {
-				ID3v2 id3v2 =  mp3File.getId3v2Tag();
-				album = id3v2.getAlbum();
-				artist = id3v2.getArtist();
-				if ((artist == null) || artist.isEmpty()){
-					artist = id3v2.getOriginalArtist();
-				}
-				if ((artist == null) || artist.isEmpty()){
-					artist = id3v2.getAlbumArtist();
-				}
-				title = id3v2.getTitle();
+			} else if (mp3File.getID3v2Tag() != null) {
+				AbstractID3v2 id3v2 =  mp3File.getID3v2Tag();
+				album = id3v2.getAlbumTitle();
+				artist = id3v2.getLeadArtist();
+				title = id3v2.getSongTitle();
 			} else {
 				String path = _destinationDir + File.separator + "_error"
 						+ File.separator + "id3 not found" + File.separator
